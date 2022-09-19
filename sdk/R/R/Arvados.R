@@ -8,9 +8,9 @@
 #' Arvados class gives users ability to access Arvados REST API. It also allowes user to manipulate collections (and projects?)
 
 #' @export Arvados3
-Arvados3 <- R6::R6Class(
+Arvados <- R6::R6Class(
 
-    "Arvados3",
+    "Arvados",
 
     public = list(
 
