@@ -2,165 +2,41 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-#' add
+#' R6 Class Representing Arvados Collection
 #'
-#' Adds ArvadosFile or Subcollection specified by content to the collection.
-#'
-#' @usage add(content)
-#' @param content sth to be added
-#' @param relativePath path to add sth
-#' @return Collection object.
-#' @name add
-NULL
-
-#' create
-#'
-#' Creates one or more ArvadosFiles and adds them to the collection at specified path.
-#'
-#' @usage mainFile <- collection$create("cpp/src/main.cpp")[[1]]
-#' @usage fileList <- collection$create(c("main.cpp", lib.dll), "cpp/src/")
-#' @param files sth to be created
-#' @return ArvadosFile objects.
-#' @name create
-NULL
-
-#' remove
-#'
-#' Remove one or more files from the collection.
-#'
-#' @usage remove(fileNames)
-#' @param fileNames sth to be removed
-#' @return Collection object.
-#' @name remove
-NULL
-
-#' move
-#'
-#' Moves ArvadosFile or Subcollection to another location in the collection.
-#'
-#' @usage move(content, destination)
-#' @param content sth to be moved
-#' @param destination path to move sth
-#' @return Collection object.
-#' @name move
-NULL
-
-#' copy
-#'
-#' Copies ArvadosFile or Subcollection to another location in the collection.
-#'
-#' @usage copy(content, destination)
-#' @param content sth to be copied
-#' @param destination path to copy sth
-#' @return Collection object.
-#' @name copy
-NULL
-
-#' readArvFile
-#'
-#' Read file content.
-#'
-#' @usage readArvFile(file, col, sep = ',', istable = NULL, fileclass = "SeqFastadna", Ncol = NULL, Nrow = NULL)
-#' @param file name of the file
-#' @param col the collection from which the file is reeaded
-#' @param sep used separator in reading tsv, csv file format
-#' @param istable used in reading txt file to check if the file is table or not
-#' @param fileclass used in reading fasta file to set file class
-#' @param Ncol used in reading binary file to set numbers of columns in data.frame
-#' @param Nrow used in reading binary file to set numbers of rows in data.frame size
-#' @return Collection object.
-#' @name readArvFile
-NULL
-
-#' getFileListing
-#'
-#' Returns collections file content as character vector.
-#'
-#' @usage getFileListing()
-#' @return Character vector.
-#' @name getFileListing
-NULL
-
-#' get
-#'
-#' If relativePath is valid, returns ArvadosFile or Subcollection specified by relativePath, else returns NULL.
-#'
-#' @usage get(relativePath)
-#' @param relativePath path from sth is taken
-#' @return Collection object.
-#' @name get
-NULL
-
-#' Collection
-#'
+#' @description
 #' Collection class provides interface for working with Arvados collections,
 #' for exaplme actions like creating, updating, moving or removing are possible.
 #'
-#' @section Usage:
-#' \preformatted{collection = Collection$new(arv, uuid)}
-#'
-#' @section Arguments:
-#' \describe{
-#'   \item{arv}{Arvados object.}
-#'   \item{uuid}{UUID of a collection.}
-#' }
-#'
-#' @section Methods:
-#' \describe{
-#' 	\item{}{\code{\link{add}}}
-#' 	\item{}{\code{\link{create}}}
-#' 	\item{}{\code{\link{remove}}}
-#' 	\item{}{\code{\link{move}}}
-#' 	\item{}{\code{\link{readArvFile}}}
-#' 	\item{}{\code{\link{copy}}}
-#' 	\item{}{\code{\link{getFileListing}}}
-#' 	\item{}{\code{\link{get}}}
-#' }
-#'
 #' @seealso
 #' \code{\link{https://github.com/arvados/arvados/tree/main/sdk/R}}
-#'
-#' @name Collection
-#' @examples
-#' \dontrun{
-#' # initialize API and a collection object:
-#' arv <- Arvados$new("your Arvados token", "example.arvadosapi.com")
-#' collection <- Collection$new(arv, "uuid")
-#'
-#' # Create new file in a collection
-#' mainFile <- collection$create("cpp/src/main.cpp")[[1]]
-#' fileList <- collection$create(c("main.cpp", lib.dll), "cpp/src/")
-#' # NOTE: It returns a vector of one or more ArvadosFile objects
-#'
-#' # Get ArvadosFile or Subcollection from internal tree-like structure
-#' arvadosFile <- collection$get("location/to/my/file.cpp")
-#' arvadosSubcollection <- collection$get("location/to/my/directory/")
-#'
-#' # Delete file or list of them from a collection
-#' collection$remove("location/to/my/file.cpp") # delete file
-#' collection$remove(c("path/to/my/file.cpp", "path/to/other/file.cpp")) # delete list of files
-#' # NOTE: You can remove both Subcollection and ArvadosFile. If subcollection contains more files or folders they will be removed recursively.
-#'
-#' # Move or rename a file or folder within a collection
-#' collection$move("folder/file.cpp", "file.cpp")
-#' }
-NULL
 
-#' @export
-Collection <- R6::R6Class(
+Collection2 <- R6::R6Class(
 
     "Collection",
 
     public = list(
 
-		uuid = NULL,
+        #' @field uuid Autentic for Collection UUID.
+        uuid = NULL,
 
-		initialize = function(api, uuid)
+        #' @description
+        #' Initialize new enviroment.
+        #' @param api Arvados enviroment.
+        #' @param uuid The UUID Autentic for Collection UUID.
+        #' @return A new `Collection` object.
+        #' @examples
+        #' collection <- Collection$new(arv, CollectionUUID)
+        initialize = function(api, uuid)
         {
             private$REST <- api$getRESTService()
             self$uuid <- uuid
         },
 
+        #' @description
+        #' Adds ArvadosFile or Subcollection specified by content to the collection. Used only with ArvadosFile or Subcollection.
+        #' @param content Content to be added.
+        #' @param relativePath Path to add content.
         add = function(content, relativePath = "")
         {
             if(is.null(private$tree))
@@ -200,10 +76,26 @@ Collection <- R6::R6Class(
                             "."))
             }
         },
-	    
-	readArvFile = function(file, con, sep = ',', istable = NULL, fileclass = "SeqFastadna", Ncol = NULL, Nrow = NULL)
+
+        #' @description
+        #' Read file content.
+        #' @param file Name of the file.
+        #' @param col Collection from which the file is read.
+        #' @param sep  Separator used in reading tsv, csv file format.
+        #' @param istable Used in reading txt file to check if the file is table or not.
+        #' @param fileclass Used in reading fasta file to set file class.
+        #' @param Ncol Used in reading binary file to set numbers of columns in data.frame.
+        #' @param Nrow Used in reading binary file to set numbers of rows in data.frame size.
+        #' @examples
+        #' collection <- Collection$new(arv, collectionUUID)
+        #' readFile <- collection$readArvFile(arvadosFile, istable = 'yes')                    # table
+        #' readFile <- collection$readArvFile(arvadosFile, istable = 'no')                     # text
+        #' readFile <- collection$readArvFile(arvadosFile)                                     # xlsx, csv, tsv, rds, rdata
+        #' readFile <- collection$readArvFile(arvadosFile, fileclass = 'lala')                 # fasta
+        #' readFile <- collection$readArvFile(arvadosFile, Ncol= 4, Nrow = 32)                 # binary, only numbers
+        #' readFile <- collection$readArvFile(arvadosFile, Ncol = 5, Nrow = 150, istable = "factor") # binary with factor or text
+        readArvFile = function(file, con, sep = ',', istable = NULL, fileclass = "SeqFastadna", Ncol = NULL, Nrow = NULL)
         {
-            print("plis")
             arvFile <- self$get(file)
             FileName <- arvFile$getName()
             FileName <- tolower(FileName)
@@ -300,7 +192,7 @@ Collection <- R6::R6Class(
                     #return(list(fileContent, mess))
                 }
             }
-            else if (FileFormat == "rds") {
+            else if (FileFormat == "rds" || FileFormat == "rdata") {
                 arvConnection <- arvFile$connection("rb")
                 mytable <- readRDS(gzcon(arvConnection))
             }
@@ -309,6 +201,60 @@ Collection <- R6::R6Class(
             }
         },
 
+        #' @description
+        #' Write file content
+        #' @param name Name of the file.
+        #' @param file File to be saved.
+        #' @param istable Used in writing txt file to check if the file is table or not.
+        #' @examples
+        #' collection <- Collection$new(arv, collectionUUID)
+        #' writeFile <- collection$writeFile("myoutput.csv", file, istable = NULL)             # csv
+        #' writeFile <- collection$writeFile("myoutput.fasta", file, istable = NULL)           # fasta
+        #' writeFile <- collection$writeFile("myoutputtable.txt", file, istable = "yes")       # txt table
+        #' writeFile <- collection$writeFile("myoutputtext.txt", file, istable = "no")         # txt text
+        #' # to save file as format rds or Rdata, xslx, dat, check
+        #' # https://github.roche.com/BEDA-recipes/arv-s3
+        #' s3write_using(file, FUN = write.xlsx, object = "output.xlsx", bucket = my_collection) # xslx
+        #' s3write_using(file, FUN = writeBin, object = "output.dat", bucket = my_collection)    # dat
+        writeFile = function(name, file, istable = NULL)
+        {
+            # prepare file and connection
+            arvFile <- collection$create(name)[[1]]
+            arvFile <- collection$get(name)
+            arvConnection <- arvFile$connection("w")
+            # get file format
+            FileName <- arvFile$getName()
+            FileName <- tolower(FileName)
+            FileFormat <- gsub(".*\\.", "", FileName)
+            if (FileFormat == "txt") {
+                if (istable == "yes") {
+                    write.table(file, arvConnection)
+                    arvFile$flush()
+                } else if (istable == "no") {
+                    write(file, arvConnection)
+                    arvFile$flush()
+                } else {
+                    stop(paste("Specify parametr istable"))
+                }
+            } else if (FileFormat == "csv") {
+                write.csv(file, arvConnection)
+                arvFile$flush()
+            } else if (FileFormat == "fasta") {
+                if (is.null(attributes(file)$Annot)) {
+                    stop(paste("The sequence must have a name"))
+                } else {
+                    file <- paste(attributes(file)$Annot, toupper(file), sep="\n")
+                    write(file, arvConnection)
+                    arvFile$flush()
+                }
+            }
+        },
+
+        #' @description
+        #' Creates one or more ArvadosFiles and adds them to the collection at specified path.
+        #' @param files Content to be created.
+        #' @examples
+        #' collection <- arv$collections_create(name = collectionTitle, description = collectionDescription, owner_uuid = collectionOwner, properties = list("ROX37196928443768648" = "ROX37742976443830153"))
         create = function(files)
         {
             if(is.null(private$tree))
@@ -327,7 +273,7 @@ Collection <- R6::R6Class(
 
                     private$REST$create(file, self$uuid)
                     newTreeBranch$setCollection(self)
-		    newTreeBranch
+                    newTreeBranch
                 })
             }
             else
@@ -338,6 +284,11 @@ Collection <- R6::R6Class(
             }
         },
 
+        #' @description
+        #' Remove one or more files from the collection.
+        #' @param paths Content to be removed.
+        #' @examples
+        #' collection$remove(fileName.format)
         remove = function(paths)
         {
             if(is.null(private$tree))
@@ -371,6 +322,12 @@ Collection <- R6::R6Class(
             }
         },
 
+        #' @description
+        #' Moves ArvadosFile or Subcollection to another location in the collection.
+        #' @param content Content to be moved.
+        #' @param destination Path to move content.
+        #' @examples
+        #' collection$move("fileName.format", path)
         move = function(content, destination)
         {
             if(is.null(private$tree))
@@ -386,6 +343,12 @@ Collection <- R6::R6Class(
             elementToMove$move(destination)
         },
 
+        #' @description
+        #' Copies ArvadosFile or Subcollection to another location in the collection.
+        #' @param content Content to be moved.
+        #' @param destination Path to move content.
+        #' @examples
+        #' copied <- collection$copy("oldName.format", "newName.format")
         copy = function(content, destination)
         {
             if(is.null(private$tree))
@@ -401,6 +364,10 @@ Collection <- R6::R6Class(
             elementToCopy$copy(destination)
         },
 
+        #' @description
+        #' Refreshes the environment.
+        #' @examples
+        #' collection$refresh()
         refresh = function()
         {
             if(!is.null(private$tree))
@@ -410,6 +377,10 @@ Collection <- R6::R6Class(
             }
         },
 
+        #' @description
+        #' Returns collections file content as character vector.
+        #' @examples
+        #' list <- collection$getFileListing()
         getFileListing = function()
         {
             if(is.null(private$tree))
@@ -419,6 +390,11 @@ Collection <- R6::R6Class(
             content[order(tolower(content))]
         },
 
+        #' @description
+        #' If relativePath is valid, returns ArvadosFile or Subcollection specified by relativePath, else returns NULL.
+        #' @param relativePath Path from content is taken.
+        #' @examples
+        #' arvadosFile <- collection$get(fileName)
         get = function(relativePath)
         {
             if(is.null(private$tree))
@@ -430,10 +406,10 @@ Collection <- R6::R6Class(
         getRESTService = function() private$REST,
         setRESTService = function(newRESTService) private$REST <- newRESTService
     ),
-
     private = list(
 
         REST        = NULL,
+        #' @tree beautiful tree of sth
         tree        = NULL,
         fileContent = NULL,
 
@@ -465,3 +441,10 @@ print.Collection = function(x, ...)
     cat(paste0("Type: ", "\"", "Arvados Collection", "\""), sep = "\n")
     cat(paste0("uuid: ", "\"", x$uuid,               "\""), sep = "\n")
 }
+
+
+
+
+
+
+
