@@ -226,6 +226,7 @@ RESTService <- R6::R6Class(
 
             serverResponse <- self$http$exec("PUT", fileURL, headers, body,
                                              retryTimes = self$numRetries)
+            print(serverResponse)
 
             if (serverResponse$status_code < 200){ # to wyrzuca błędy
                 stop(paste("Server code:", serverResponse$status_code))}
