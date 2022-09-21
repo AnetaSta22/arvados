@@ -11,7 +11,7 @@
 #' @seealso
 #' \code{\link{https://github.com/arvados/arvados/tree/main/sdk/R}}
 
-Collection2 <- R6::R6Class(
+Collection <- R6::R6Class(
 
     "Collection",
 
