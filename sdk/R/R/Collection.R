@@ -398,7 +398,7 @@ Collection <- R6::R6Class(
         get = function(relativePath)
         {
             if(is.null(private$tree))
-                private$generateCollectionTreeStructure()
+                private$generateCollectionTreeStructure(relativePath)
 
             private$tree$getElement(relativePath)
         },
