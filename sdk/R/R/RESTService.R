@@ -110,10 +110,10 @@ RESTService <- R6::R6Class(
             serverResponse
         },
 
-        getCollectionContent = function(uuid)
+       getCollectionContent = function(uuid, relativePath)
         {
             collectionURL <- URLencode(paste0(self$getWebDavHostName(),
-                                              "c=", uuid))
+                                             "c=", uuid, "/", relativePath))
 
             headers <- list("Authorization" = paste("Bearer", self$token))
 
