@@ -413,7 +413,7 @@ Collection <- R6::R6Class(
         tree        = NULL,
         fileContent = NULL,
 
-        generateCollectionTreeStructure = function()
+        generateCollectionTreeStructure = function(relativePath = NULL)
         {
             if(is.null(self$uuid))
                 stop("Collection uuid is not defined.")
@@ -421,7 +421,7 @@ Collection <- R6::R6Class(
             if(is.null(private$REST))
                 stop("REST service is not defined.")
 
-            private$fileContent <- private$REST$getCollectionContent(self$uuid)
+            private$fileContent <- private$REST$getCollectionContent(self$uuid, relativePath)
             private$tree <- CollectionTree$new(private$fileContent, self)
         }
     ),
