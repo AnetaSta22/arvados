@@ -7,7 +7,7 @@
 #' @description
 #' Arvados class gives users ability to access Arvados REST API. It also allowes user to manipulate collections (and projects?)
 
-#' @export Arvados3
+#' @export Arvados
 Arvados <- R6::R6Class(
 
     "Arvados",
@@ -48,13 +48,13 @@ Arvados <- R6::R6Class(
         },
 
         #' @description
-        #' projects_exist enables checking if the project with such a UUID exist.
+        #' project_exist enables checking if the project with such a UUID exist.
         #' @param uuid The UUID of a project or a file.
         #' @examples
-        #' arv$projects_exist(uuid = projectUUID)
-        projects_exist = function(uuid)
+        #' arv$project_exist(uuid = projectUUID)
+        project_exist = function(uuid)
         {
-            proj <- self$projects_list(list(list("uuid", 'like', uuid)))
+            proj <- self$project_list(list(list("uuid", '=', uuid)))
             value <- length(proj$items)
 
             if (value == 1){
@@ -65,17 +65,17 @@ Arvados <- R6::R6Class(
         },
 
         #' @description
-        #' projects_get returns the demanded project.
+        #' project_get returns the demanded project.
         #' @param uuid The UUID of the Group in question.
         #' @examples
-        #' project <- arv$projects_get(uuid = projectUUID)
-        projects_get = function(uuid)
+        #' project <- arv$project_get(uuid = projectUUID)
+        project_get = function(uuid)
         {
             self$groups_get(uuid)
         },
 
         #' @description
-        #' projects_create creates a new project of a given name and description.
+        #' project_create creates a new project of a given name and description.
         #' @param name Name of the project.
         #' @param description Description of the project.
         #' @param ownerUUID The UUID of the maternal project to created one.
@@ -83,39 +83,39 @@ Arvados <- R6::R6Class(
         #' @param ensureUniqueName Adjust name to ensure uniqueness instead of returning an error.
         #' @examples
         #' Properties <- list("ROX37196928443768648" = "ROX37742976443830153", "ROX37210752443769239" ="ROX1310128536638") # an example list of properties
-        #' new_project <- arv$projects_create(name = "project name", description = "project description", owner_uuid = "project UUID", properties = NULL, ensureUniqueName = "false")
-        projects_create = function(name, description, ownerUUID, properties = NULL, ensureUniqueName = "false")
+        #' new_project <- arv$project_create(name = "project name", description = "project description", owner_uuid = "project UUID", properties = NULL, ensureUniqueName = "false")
+        project_create = function(name, description, ownerUUID, properties = NULL, ensureUniqueName = "false")
         {
-            group <- list(name = name, description = description, ownerUUID = ownerUUID, properties = properties)
+            group <- list(name = name, description = description, owner_uuid = ownerUUID, properties = properties)
             group <- c("group_class" = "project", group)
-            self$groups_create(group, ensureUniqueName)
+            self$groups_create(group, ensureUniqueName =  ensureUniqueName)
         },
 
         #' @description
-        #' projects_properties_set is a method defined in Arvados class that enables setting properties. Allows to set or overwrite the properties.
+        #' project_properties_set is a method defined in Arvados class that enables setting properties. Allows to set or overwrite the properties. In case there are set already it overwrites them.
         #' @param listProperties List of new properties.
-        #' @param projectUUID The UUID of a project or a file.
+        #' @param uuid The UUID of a project or a file.
         #' @examples
         #' Properties <- list("ROX37196928443768648" = "ROX37742976443830153", "ROX37210752443769239" ="ROX1310128536638") # an example list of properties
-        #' arv$projects_properties_set(Properties, projectUUID)
-        projects_properties_set = function(listProperties, projectUUID)
+        #' arv$project_properties_set(Properties, uuid)
+        project_properties_set = function(listProperties, uuid)
         {
             #listProperties <- list("properties" = listProperties)
             group <- c("group_class" = "project", list("properties" = listProperties))
-            self$groups_update(group, projectUUID)
+            self$groups_update(group, uuid)
 
         },
 
         #' @description
-        #' projects_properties_append is a method defined in Arvados class that enables appending properties. Allows to add new properties.
+        #' project_properties_append is a method defined in Arvados class that enables appending properties. Allows to add new properties.
         #' @param listOfNewProperties List of new properties.
-        #' @param projectUUID The UUID of a project or a file.
+        #' @param uuid The UUID of a project or a file.
         #' @examples
         #' newProperties <- list("ROX37464768443796862" = "ROX1305277804322") # an example list of new properties to be added
-        #' arv$projects_properties_append(newProperties, "ardev-j7d0g-2zjpveur831w670")
-        projects_properties_append = function(properties, object)
+        #' arv$project_properties_append(newProperties, uuid)
+        project_properties_append = function(properties, uuid)
         {
-            proj <- self$projects_list(list(list('uuid', 'like', object)))
+            proj <- self$project_list(list(list('uuid', '=', uuid)))
             projProp <- proj$items[[1]]$properties
 
             newListOfProperties <- c(projProp, properties)
@@ -123,53 +123,53 @@ Arvados <- R6::R6Class(
             newListOfProperties <- suppressWarnings(newListOfProperties[which(newListOfProperties == uniqueProperties)])
 
             group <- c("group_class" = "project", list("properties" = newListOfProperties))
-            self$groups_update(group, object);
+            self$groups_update(group, uuid);
 
         },
 
         #' @description
-        #' projects_properties_get is a method defined in Arvados class that returns properties.
+        #' project_properties_get is a method defined in Arvados class that returns properties.
         #' @param uuid The UUID of a project or a file.
         #' @examples
-        #' arv$projects_properties_get(projectUUID)
-        projects_properties_get = function(uuid)
+        #' arv$project_properties_get(projectUUID)
+        project_properties_get = function(uuid)
         {
-            proj <- self$projects_list(list(list('uuid', 'like', object)))
+            proj <- self$project_list(list(list('uuid', '=', uuid)))
             proj$items[[1]]$properties
         },
 
         #' @description
-        #' projects_properties_delete is a method defined in Arvados class that deletes list of properties.
+        #' project_properties_delete is a method defined in Arvados class that deletes list of properties.
         #' @param oneProp Property to be deleted.
         #' @param uuid The UUID of a project or a file.
         #' @examples
-        #' arv$projects_properties.delete(list("ROX37464768443796862" = "ROX1305277804322"),  projectUUID)
-        projects_properties_delete = function(oneProp, uuid)
+        #' arv$project_properties_delete(list("ROX37464768443796862" = "ROX1305277804322"),  projectUUID)
+        project_properties_delete = function(oneProp, uuid)
         {
-            proj <- self$projects_list(list(list('uuid', 'like', uuid))) # find project
+            proj <- self$project_list(list(list('uuid', '=', uuid))) # find project
             projProp <- proj$items[[1]]$properties
             for (i in 1:length(projProp)){
                 solution <- identical(projProp[i],oneProp)
                 if (solution == TRUE) {
                     projProp <- projProp[names(projProp) != names(oneProp)]
-                    self$projects_properties_set(projProp, uuid)
+                    self$project_properties_set(projProp, uuid)
                 }
             }
         },
 
         #' @description
-        #' projects_update enables updating project. New name, description and properties may be given.
+        #' project_update enables updating project. New name, description and properties may be given.
         #' @param ... Feature to be updated (name, description, properties).
         #' @param uuid The UUID of a project in question.
         #' @examples
         #' newProperties <- list("ROX37464768443796862" = "ROX1305277804322") # an example list of new properties to be added
-        #' arv$projects_update(name = "new project name", properties = newProperties, uuid = projectUUID)
-        projects_update = function(..., uuid) {
+        #' arv$project_update(name = "new project name", properties = newProperties, uuid = projectUUID)
+        project_update = function(..., uuid) {
             vec <- list(...)
             for (i in 1:length(vec))
             {
                 if (names(vec[i]) == 'properties') {
-                    solution <- self$projects_properties_append(vec$properties, object = uuid)
+                    solution <- self$project_properties_append(vec$properties, uuid = uuid)
                 }
             }
             vecNew <- vec[names(vec) != "properties"]
@@ -178,7 +178,7 @@ Arvados <- R6::R6Class(
         },
 
         #' @description
-        #' projects_list enables listing project by its name, uuid, properties, permissions.
+        #' project_list enables listing project by its name, uuid, properties, permissions.
         #' @param filters
         #' @param where
         #' @param order
@@ -190,11 +190,11 @@ Arvados <- R6::R6Class(
         #' @param uuid The UUID of a project in question.
         #' @param recursive Include contents from child groups recursively.
         #' @examples
-        #' listOfprojects <- arv$projects_list(list(list("owner_uuid", "=", projectUUID))) # Sample query which show projects within the project of a given UUID
-        projects_list = function(filters = NULL, where = NULL,
-                                 order = NULL, select = NULL, distinct = NULL,
-                                 limit = "100", offset = "0", count = "exact",
-                                 includeTrash = NULL)
+        #' listOfprojects <- arv$project_list(list(list("owner_uuid", "=", projectUUID))) # Sample query which show projects within the project of a given UUID
+        project_list = function(filters = NULL, where = NULL,
+                                order = NULL, select = NULL, distinct = NULL,
+                                limit = "100", offset = "0", count = "exact",
+                                includeTrash = NULL)
         {
             filters[[length(filters) + 1]] <- list("group_class", "=", "project")
             self$groups_list(filters, where, order, select, distinct,
@@ -202,9 +202,9 @@ Arvados <- R6::R6Class(
         },
 
         #' @description
-        #' projects_delete deletes project of a given uuid.
+        #' project_delete trashes project of a given uuid. It can be restored from trash or deleted permanently.
         #' @param uuid The UUID of the Group in question.
-        projects_delete = function(uuid)
+        project_delete = function(uuid)
         {
             self$groups_delete(uuid)
         },
@@ -729,7 +729,7 @@ Arvados <- R6::R6Class(
             queryArgs <- list(ensureUniqueName = ensureUniqueName,
                               clusterID = clusterID)
 
-            collection <- list(name = name, description = description, ownerUUID = ownerUUID, properties = properties)
+            collection <- list(name = name, description = description, owner_uuid = ownerUUID, properties = properties)
             if(length(collection) > 0)
                 body <- jsonlite::toJSON(list(collection = collection),
                                          auto_unbox = TRUE)
@@ -923,7 +923,7 @@ Arvados <- R6::R6Class(
         #' @param includeTrash Include collections whose is_trashed attribute is true.
         #' @param includeOldVersions Include past collection versions.
         #' @examples
-        #' collectionList <- arv$collections.list(list(list("name", "like", "Example")))
+        #' collectionList <- arv$collections.list(list(list("name", "=", "Example")))
         collections_list = function(filters = NULL,
                                     where = NULL, order = NULL, select = NULL,
                                     distinct = NULL, limit = "100", offset = "0",
@@ -1404,11 +1404,13 @@ Arvados <- R6::R6Class(
 
             response <- private$REST$http$exec("POST", url, headers, body,
                                                queryArgs, private$numRetries)
+
             resource <- private$REST$httpParser$parseJSONResponse(response)
 
             if(!is.null(resource$errors)){
-                if (identical(sub('>.*', "", resource$errors), "//railsapi.internal/arvados/v1/groups: 422 Unprocessable Entity: #<ActiveModel::UnknownAttributeError: unknown attribute 'ownerUUID' for Group.")) {
-                    cat(format("project of that name already exist. If you want to update it use projects_update() instead"))
+                #if (identical(sub('#.*', "", resource$errors), "//railsapi.internal/arvados/v1/groups: 422 Unprocessable Entity: ")) {
+                if (identical(sub('P.*', "", resource$errors), "//railsapi.internal/arvados/v1/groups: 422 Unprocessable Entity: #\u003cActiveRecord::RecordNotUnique: ")) {
+                    cat(format("project of that name already exist. If you want to update it use project_update() instead"))
                 }else{
                     stop(resource$errors)
                 }
@@ -1467,6 +1469,9 @@ Arvados <- R6::R6Class(
 
             if(!is.null(resource$errors))
                 stop(resource$errors)
+
+            dataTime <- gsub("T.*", "", resource$delete_at)
+            cat("The content will be deleted permanently at", dataTime)
 
             resource
         },
@@ -1815,13 +1820,13 @@ Arvados <- R6::R6Class(
         },
 
         #' @description
-        #' projects_permission_give is a method defined in Arvados class that enables sharing files with another users.
+        #' project_permission_give is a method defined in Arvados class that enables sharing files with another users.
         #' @param type Possible options are can_read or can_write or can_manage.
-        #' @param object The UUID of a project or a file.
+        #' @param uuid The UUID of a project or a file.
         #' @param user The UUID of the person that gets the permission.
         #' @examples
-        #' arv$projects_permission_give(type = "can_read", object = objectUUID, user = userUUID)
-        projects_permission_give = function(type, object, user)
+        #' arv$project_permission_give(type = "can_read", uuid = objectUUID, user = userUUID)
+        project_permission_give = function(type, uuid, user)
         {
             endPoint <- stringr::str_interp("links")
             url <- paste0(private$host, endPoint)
@@ -1830,7 +1835,7 @@ Arvados <- R6::R6Class(
             queryArgs <- NULL
 
             # it is possible to make it as pasting a list to function, not a 3 arg. What's better?
-            link <- list("link_class" = "permission", "name" = type, "head_uuid" = object, "tail_uuid" = user)
+            link <- list("link_class" = "permission", "name" = type, "head_uuid" = uuid, "tail_uuid" = user)
 
             if(length(link) > 0)
                 body <- jsonlite::toJSON(list(link = link),
@@ -1849,22 +1854,22 @@ Arvados <- R6::R6Class(
         },
 
         #' @description
-        #' projects_permission_refuse is a method defined in Arvados class that unables sharing files with another users.
+        #' project_permission_refuse is a method defined in Arvados class that unables sharing files with another users.
         #' @param type Possible options are can_read or can_write or can_manage.
-        #' @param object The UUID of a project or a file.
+        #' @param uuid The UUID of a project or a file.
         #' @param user The UUID of a person that permissions are taken from.
         #' @examples
-        #' arv$projects_permission_remove(type = "can_read", object = objectUUID, user = userUUID)
-        projects_permission_remove = function(type, object, user)
+        #' arv$project_permission_refuse(type = "can_read", uuid = objectUUID, user = userUUID)
+        project_permission_refuse = function(type, uuid, user)
         {
-            examples <- self$links_list(list(list("head_uuid","like", object)))
+            examples <- self$links_list(list(list("head_uuid","=", uuid)))
 
             theUser <- examples[which(sapply(examples$items, "[[", "tail_uuid") == user)]
             theType <- theUser$items[which(sapply(theUser$items, "[[", "name") == type)]
             solution <- theType[which(sapply(theType, "[[", "link_class") == 'permission')]
 
             if (length(solution) == 0) {
-                cat(format('No permition granted'))
+                cat(format('No permission granted'))
             } else {
                 self$links_delete(solution[[1]]$uuid)
             }
@@ -1872,40 +1877,40 @@ Arvados <- R6::R6Class(
         },
 
         #' @description
-        #' projects_permission_update is a method defined in Arvados class that enables updating permissions.
+        #' project_permission_update is a method defined in Arvados class that enables updating permissions.
         #' @param typeNew New option like can_read or can_write or can_manage.
         #' @param typeOld Old option.
-        #' @param object The UUID of a project or a file.
+        #' @param uuid The UUID of a project or a file.
         #' @param user The UUID of the person that the permission is being updated.
         #' @examples
-        #' arv$projects_permission_update(typeOld = "can_read", typeNew = "can_write", object = objectUUID, user = userUUID)
-        projects_permission_update = function(typeOld, typeNew, object, user)
+        #' arv$project_permission_update(typeOld = "can_read", typeNew = "can_write", uuid = objectUUID, user = userUUID)
+        project_permission_update = function(typeOld, typeNew, uuid, user)
         {
             link <- list("name" = typeNew)
 
-            examples <- self$links_list(list(list("head_uuid","like", object)))
+            examples <- self$links_list(list(list("head_uuid","=", uuid)))
 
             theUser <- examples[which(sapply(examples$items, "[[", "tail_uuid") == user)]
             theType <- theUser$items[which(sapply(theUser$items, "[[", "name") == typeOld)]
             solution <- theType[which(sapply(theType, "[[", "link_class") == 'permission')]
 
             if (length(solution) == 0) {
-                cat(format('No permition granted'))
+                cat(format('No permission granted'))
             } else {
                 self$links_update(link, solution[[1]]$uuid)
             }
         },
 
         #' @description
-        #' projects_permission_check is a method defined in Arvados class that enables checking file permissions.
-        #' @param object The UUID of a project or a file.
+        #' project_permission_check is a method defined in Arvados class that enables checking file permissions.
+        #' @param uuid The UUID of a project or a file.
         #' @param user The UUID of the person that the permission is being updated.
         #' @param type Possible options are can_read or can_write or can_manage.
         #' @examples
-        #' arv$projects_permission_check(type = "can_read", object = objectUUID, user = userUUID)
-        projects_permission_check = function(object, user, type = NULL)
+        #' arv$project_permission_check(type = "can_read", uuid = objectUUID, user = userUUID)
+        project_permission_check = function(uuid, user, type = NULL)
         {
-            examples <- self$links_list(list(list("head_uuid","like", object)))
+            examples <- self$links_list(list(list("head_uuid","=", uuid)))
 
             theUser <- examples[which(sapply(examples$items, "[[", "tail_uuid") == user)]
 
@@ -1913,7 +1918,8 @@ Arvados <- R6::R6Class(
                 theUser
             } else {
                 theType <- theUser$items[which(sapply(theUser$items, "[[", "name") == type)]
-                theType[which(sapply(theType, "[[", "link_class") == 'permission')]
+                permisions <- theType[which(sapply(theType, "[[", "link_class") == 'permission')]
+                print(permisions[[1]]$name)
             }
         },
 
