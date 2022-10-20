@@ -10,6 +10,8 @@
 #'
 #' @seealso
 #' \code{\link{https://github.com/arvados/arvados/tree/main/sdk/R}}
+#'
+#' @export
 
 Collection <- R6::R6Class(
 
@@ -94,12 +96,25 @@ Collection <- R6::R6Class(
         #' readFile <- collection$readArvFile(arvadosFile, fileclass = 'lala')                 # fasta
         #' readFile <- collection$readArvFile(arvadosFile, Ncol= 4, Nrow = 32)                 # binary, only numbers
         #' readFile <- collection$readArvFile(arvadosFile, Ncol = 5, Nrow = 150, istable = "factor") # binary with factor or text
-        readArvFile = function(file, con, sep = ',', istable = NULL, fileclass = "SeqFastadna", Ncol = NULL, Nrow = NULL)
+        readArvFile = function(file, con, sep = ',', istable = NULL, fileclass = "SeqFastadna", Ncol = NULL, Nrow = NULL, wantedFunction = NULL)
         {
             arvFile <- self$get(file)
             FileName <- arvFile$getName()
             FileName <- tolower(FileName)
             FileFormat <- gsub(".*\\.", "", FileName)
+
+            # set enviroment
+            ARVADOS_API_TOKEN <- Sys.getenv("ARVADOS_API_TOKEN")
+            ARVADOS_API_HOST <- Sys.getenv("ARVADOS_API_HOST")
+            my_collection <- self$uuid
+            key <- gsub("/", "_", ARVADOS_API_TOKEN)
+
+            Sys.setenv(
+                "AWS_ACCESS_KEY_ID" = key,
+                "AWS_SECRET_ACCESS_KEY" = key,
+                "AWS_DEFAULT_REGION" = "collections",
+                "AWS_S3_ENDPOINT" = gsub("api[.]", "", ARVADOS_API_HOST))
+
             if (FileFormat == "txt") {
                 if (is.null(istable)){
                     stop(paste('You need to paste whether it is a text or table file'))
@@ -112,8 +127,9 @@ Collection <- R6::R6Class(
                 }
             }
             else if (FileFormat  == "xlsx") {
-                arvConnection <- arvFile$connection("r")
-                fileContent   <- read.table(arvConnection)
+                # arvConnection <- arvFile$connection("r")
+                # fileContent   <- read.table(arvConnection)
+                fileContent <- aws.s3::s3read_using(FUN = openxlsx::read.xlsx, object = file, bucket = my_collection)
             }
             else if (FileFormat == "csv" || FileFormat == "tsv") {
                 arvConnection <- arvFile$connection("r")
@@ -149,7 +165,7 @@ Collection <- R6::R6Class(
                 }
                 fastafile <- read_fasta.file(fileContent)
             }
-            else if (FileFormat == "dat") {
+            else if (FileFormat == "dat" || FileFormat == "bin") {
                 #fileContent <- arvFile$read()
                 fileContent <- gzcon(arvFile$connection("rb"))
 
@@ -201,6 +217,24 @@ Collection <- R6::R6Class(
             }
         },
 
+        # readfiles = function(fileName, collectionUUID, istable = NULL) {
+        #
+        #
+        #     # choose way to deal with the file
+        #     if (FileFormat == "txt") {
+        #         if (is.null(istable)){
+        #             stop(paste('You need to paste whether it is a text or table file'))
+        #         } else if (istable == 'no') {
+        #             fileContent <- arvFile$read("text") # used to read
+        #             arvFile <- gsub("[\r\n]", " ", fileContent)
+        #         } else if (istable == 'yes') {
+        #             arvFile <- aws.s3::s3read_using(FUN = read.table, object = fileName, bucket = collectionUUID)
+        #         }
+        #
+        #     }
+        #     return(arvFile)
+        # },
+
         #' @description
         #' Write file content
         #' @param name Name of the file.
@@ -226,19 +260,35 @@ Collection <- R6::R6Class(
             FileName <- arvFile$getName()
             FileName <- tolower(FileName)
             FileFormat <- gsub(".*\\.", "", FileName)
+
+            # set enviroment
+            ARVADOS_API_TOKEN <- Sys.getenv("ARVADOS_API_TOKEN")
+            ARVADOS_API_HOST <- Sys.getenv("ARVADOS_API_HOST")
+            my_collection <- self$uuid
+            key <- gsub("/", "_", ARVADOS_API_TOKEN)
+
+            Sys.setenv(
+                "AWS_ACCESS_KEY_ID" = key,
+                "AWS_SECRET_ACCESS_KEY" = key,
+                "AWS_DEFAULT_REGION" = "collections",
+                "AWS_S3_ENDPOINT" = gsub("api[.]", "", ARVADOS_API_HOST))
+
             if (FileFormat == "txt") {
                 if (istable == "yes") {
-                    write.table(file, arvConnection)
-                    arvFile$flush()
+                    #write.table(file, arvConnection)
+                    aws.s3::s3write_using(file, FUN = write.table, object = name, bucket = my_collection)
+                    #arvFile$flush()
                 } else if (istable == "no") {
-                    write(file, arvConnection)
-                    arvFile$flush()
+                    # write(file, arvConnection)
+                    # arvFile$flush()
+                    aws.s3::s3write_using(file, FUN = writeChar, object = name, bucket = my_collection)
                 } else {
                     stop(paste("Specify parametr istable"))
                 }
             } else if (FileFormat == "csv") {
-                write.csv(file, arvConnection)
-                arvFile$flush()
+                # write.csv(file, arvConnection)
+                # arvFile$flush()
+                aws.s3::s3write_using(file, FUN = write.csv, object = name, bucket = my_collection)
             } else if (FileFormat == "fasta") {
                 if (is.null(attributes(file)$Annot)) {
                     stop(paste("The sequence must have a name"))
@@ -247,7 +297,14 @@ Collection <- R6::R6Class(
                     write(file, arvConnection)
                     arvFile$flush()
                 }
+            } else if (FileFormat == "xlsx") {
+                aws.s3::s3write_using(file, FUN = openxlsx::write.xlsx, object = name, bucket = my_collection)
+            } else if (FileFormat == "dat" || FileFormat == "bin") {
+                aws.s3::s3write_using(file, FUN = writeBin, object = name, bucket = my_collection)
+            } else {
+                stop(parse(('File format not supported, use arvadosFile$connection() and customise it')))
             }
+
         },
 
         #' @description
