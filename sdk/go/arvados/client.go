@@ -7,6 +7,7 @@ package arvados
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -15,6 +16,7 @@ import (
 	"io/fs"
 	"io/ioutil"
 	"log"
+	"math/big"
 	"net"
 	"net/http"
 	"net/url"
@@ -151,10 +153,10 @@ func NewClientFromConfig(cluster *Cluster) (*Client, error) {
 // Space characters are trimmed when reading the settings file, so
 // these are equivalent:
 //
-//   ARVADOS_API_HOST=localhost\n
-//   ARVADOS_API_HOST=localhost\r\n
-//   ARVADOS_API_HOST = localhost \n
-//   \tARVADOS_API_HOST = localhost\n
+//	ARVADOS_API_HOST=localhost\n
+//	ARVADOS_API_HOST=localhost\r\n
+//	ARVADOS_API_HOST = localhost \n
+//	\tARVADOS_API_HOST = localhost\n
 func NewClientFromEnv() *Client {
 	vars := map[string]string{}
 	home := os.Getenv("HOME")
@@ -328,11 +330,11 @@ func (c *Client) DoAndDecode(dst interface{}, req *http.Request) error {
 
 // Convert an arbitrary struct to url.Values. For example,
 //
-//     Foo{Bar: []int{1,2,3}, Baz: "waz"}
+//	Foo{Bar: []int{1,2,3}, Baz: "waz"}
 //
 // becomes
 //
-//     url.Values{`bar`:`{"a":[1,2,3]}`,`Baz`:`waz`}
+//	url.Values{`bar`:`{"a":[1,2,3]}`,`Baz`:`waz`}
 //
 // params itself is returned if it is already an url.Values.
 func anythingToValues(params interface{}) (url.Values, error) {
@@ -598,4 +600,14 @@ func (c *Client) PathForUUID(method, uuid string) (string, error) {
 		path = path[1:]
 	}
 	return path, nil
+}
+
+var maxUUIDInt = (&big.Int{}).Exp(big.NewInt(36), big.NewInt(15), nil)
+
+func RandomUUID(clusterID, infix string) string {
+	n, err := rand.Int(rand.Reader, maxUUIDInt)
+	if err != nil {
+		panic(err)
+	}
+	return clusterID + "-" + infix + "-" + n.Text(36)
 }

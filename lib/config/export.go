@@ -226,6 +226,7 @@ var whitelist = map[string]bool{
 	"TLS.Key":                                             false,
 	"Users":                                               true,
 	"Users.ActivatedUsersAreVisibleToOthers":              false,
+	"Users.ActivityLoggingPeriod":                         false,
 	"Users.AdminNotifierEmailFrom":                        false,
 	"Users.AnonymousUserToken":                            true,
 	"Users.AutoAdminFirstUser":                            false,
@@ -290,6 +291,7 @@ var whitelist = map[string]bool{
 	"Workbench.UserProfileFormFields.*.*.*":               true,
 	"Workbench.UserProfileFormMessage":                    true,
 	"Workbench.WelcomePageHTML":                           true,
+	"Workbench.BannerURL":                                 true,
 }
 
 func redactUnsafe(m map[string]interface{}, mPrefix, lookupPrefix string) error {
