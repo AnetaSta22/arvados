@@ -18,25 +18,23 @@ This SDK focuses on providing support for accessing Arvados projects, collection
 
 ## Installation
 
-Minimum R version required to run ArvadosR is 3.3.0.
-
+For installation in R paste:
 ```r
 install.packages("ArvadosR", repos=c("https://r.arvados.org", getOption("repos")["CRAN"]), dependencies=TRUE)
 library('ArvadosR')
 ```
-
 > **Note**
-> On Linux, you may have to install supporting packages.
->
-> On Centos 7, this is:
-> ```
-> yum install libxml2-devel openssl-devel curl-devel
-> ```
->
-> On Debian, this is:
-> ```
-> apt-get install build-essential libxml2-dev libssl-dev libcurl4-gnutls-dev
-> ```
+> Minimum R version required to run ArvadosR is 3.3.0.
+
+For installation using Linux, you may have to install supporting packages.
+* On Centos 7, this is:
+```
+yum install libxml2-devel openssl-devel curl-devel
+```
+* On Debian, this is:
+```
+apt-get install build-essential libxml2-dev libssl-dev libcurl4-gnutls-dev
+```
 
 
 ## Usage
