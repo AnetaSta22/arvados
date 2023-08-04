@@ -80,7 +80,6 @@ newProject <- arv$project_create(name = "NewDocumentationProject", description =
 arv$project_permission_give(type = "can_read", uuid = "projectUUID", user = "personUUID")
 arv$project_permission_give(type = "can_write", uuid = "projectUUID", user = "personUUID") 
 arv$project_permission_give(type = "can_manage", uuid = "projectUUID", user = "personUUID") 
-
 ```
 
 ##### Set properties for a project:
@@ -88,7 +87,6 @@ arv$project_permission_give(type = "can_manage", uuid = "projectUUID", user = "p
 ```r
 Properties <- list("key_1" = "value_1")
 arv$project_properties_set(Properties, "projectUUID")
-
 ```
 
 #### Update project:
@@ -139,7 +137,7 @@ arv$project_trash(uuid = "projectUUID")
 ##### Get a project:
 
 ```r
-project <- arv$project_get(newProject$uuid)
+project <- arv$project_get("projectUUID")
 ```
 
 ##### List projects:
@@ -149,60 +147,152 @@ project <- arv$project_get(newProject$uuid)
 projects <- arv$project_list(list(list("owner_uuid", "=", "aaaaa-j7d0g-ccccccccccccccc")))
 ## list projects which have names beginning with Example
 examples <- arv$project_list(list(list("name","like","Example%")))
-#List all projects even if the number of items is greater than maximum API limit:
+```
+
+##### List all projects even if the number of items is greater than maximum API limit:
+
+```r
 projects <- listAll(arv$project_list, list(list("name","like","Example%")))
 ```
 
+> **Note**
+> Check method of filtering
+> [Filtering methods:](https://doc.arvados.org/main/api/methods.html)
+
+#### Other useful features:
+
+# Check whether the project exists or not
+
+```
+arv$project_exist(uuid = newProject$uuid)
+```
+
+# Also check for given permissions
+
+```
+arv$project_permission_check(uuid = newProject$uuid, user =  'arlog-tpzed-wlzptadvp43l1xe', type = "can_read") # check access
+```
+
+# And project properties
+
+```
+arv$project_properties_get(uuid = newProject$uuid)
+```
 
 ### Working with collections
 
 #### Create a new collection:
 
+##### Basic creation of the collection:
+
 ```r
-newCollection <- arv$collections_create(name = "collectionTitle", description = "collectionDescription", ownerUUID = "collectionOwner", properties = Properties)
+Properties <- list("key_1" = "value_1")
+newCollection <- arv$collections_create(name = "collectionTitle", description = "collectionDescription", ownerUUID = "HeadProjectUUID", properties = Properties)
+```
+
+##### Grant access rights for a collection:
+
+```r
+arv$collection_permission_give(type = "can_read", uuid = "collectionUUID", user = "personUUID") 
+arv$collection_permission_give(type = "can_read", uuid = "collectionUUID", user = "personUUID") 
+arv$collection_permission_give(type = "can_read", uuid = "collectionUUID", user = "personUUID") 
+```
+
+##### Set properties for a collection:
+
+```r
+newProperties <- list("key_1"="value_1", "key_2"="value_2")
+arv$collections_properties_set(newProperties, "collectionUUID")
 ```
 
 #### Update a collection’s metadata:
 
-```r
-collection <- arv$collections_update(name = "newCollectionTitle", description = "newCollectionDescription", ownerUUID = "collectionOwner", properties = NULL, uuid =  "collectionUUID")
-```
-
-#### Delete a collection:
+##### Basic update of the collection:
 
 ```r
-deletedCollection <- arv$collections_delete("uuid")
+newProperties <- list("key_1" = "value_1")
+collection <- arv$collections_update(name = "newCollectionTitle", description = "newCollectionDescription", properties = newProperties, uuid = "collectionUUID")
 ```
 
-#### Find a collection:
-
-#### Get a collection:
+##### Update access rights for a collection:
 
 ```r
-collection <- arv$collections_get("uuid")
+# update access # not working yet
+#arv$collection_permission_update(typeOld = "can_read", typeNew = 'can_write', uuid = "collectionUUID", user = "personUUID")
+# refuse access # not working yet
+#arv$collection_permission_refuse(type = "can_write", uuid = "collectionUUID", user = "personUUID") 
 ```
 
-Be aware that the result from `collections_get` is not a Collection class. The object returned from this method lets you access collection fields like “name” and “description”. The Collection class lets you access the files in the collection for reading and writing, and is described in the next section.
+##### Change properties for  a collection:
 
-#### List collections:
+```r
+# delete property
+toDel <- list("key_1"="value_1")
+collection <- arv$collections_properties_delete(toDel, "collectionUUID")
+# append properties
+basicList <- list("key_1"="value_1")
+collection <- arv$collections_properties_append(basicList, "collectionUUID") 
+```
+
+#### Delete a project:
+
+##### Delete
+
+```r
+arv$collections_delete(newCollection$uuid)
+```
+
+##### Trash and untrash
+
+```r
+# not written yet
+```
+
+#### Find a project:
+
+##### Get a project:
+
+```r
+newCollection <- arv$collections_get(newCollection$uuid)
+```
+
+##### List projects:
 
 ```r
 # offset of 0 and default limit of 100
 collectionList <- arv$collections_list(list(list("name", "like", "Test%")))
-
 collectionList <- arv$collections_list(list(list("name", "like", "Test%")), limit = 10, offset = 2)
-
 # count of total number of items (may be more than returned due to paging)
 collectionList$items_available
-
 # items which match the filter criteria
 collectionList$items
 ```
 
-#### List all collections even if the number of items is greater than maximum API limit:
+##### List all collections even if the number of items is greater than maximum API limit:
 
 ```r
 collectionList <- listAll(arv$collections_list, list(list("name", "like", "Test%")))
+```
+
+#### Other useful features:
+
+# Check whether the collection exists or not
+
+```
+# not written yet
+```
+
+# Also check for given permissions
+
+```
+# not working yet
+arv$collection_permission_check(uuid = newCollection$uuid, user =  'arlog-tpzed-wlzptadvp43l1xe', type = "can_read") 
+```
+
+# And project properties
+
+```
+arv$collections_properties_get(newCollection$uuid)
 ```
 
 ### Manipulating collection content
@@ -213,72 +303,26 @@ collectionList <- listAll(arv$collections_list, list(list("name", "like", "Test%
 collection <- Collection$new(arv, "uuid")
 ```
 
-#### Get list of files:
+#### Find file :
+
+##### Get list of files:
 
 ```r
 files <- collection$getFileListing()
 ```
 
-#### Get ArvadosFile or Subcollection from internal tree-like structure:
+##### Get ArvadosFile or Subcollection from internal tree-like structure:
 
 ```r
 arvadosFile <- collection$get("location/to/my/file.cpp")
-# or
 arvadosSubcollection <- collection$get("location/to/my/directory/")
-```
-
-#### Read a table:
-
-```r
-arvadosFile   <- collection$get("myinput.txt")
-arvConnection <- arvadosFile$connection("r")
-mytable       <- read.table(arvConnection)
-```
-
-#### Write a table:
-
-```r
-arvadosFile   <- collection$create("myoutput.txt")[[1]]
-arvConnection <- arvadosFile$connection("w")
-write.table(mytable, arvConnection)
-arvadosFile$flush()
-```
-
-#### Read a table from a tab delimited file:
-
-```r
-arvadosFile   <- collection$get("myinput.txt")
-arvConnection <- arvadosFile$connection("r")
-mytable       <- read.delim(arvConnection)
-```
-
-#### Read a gzip compressed R object:
-
-```r
-obj <- readRDS(gzcon(coll$get("abc.RDS")$connection("rb")))
-```
-
-#### Write to existing file (overwrites current content of the file):
-
-```r
-arvadosFile <- collection$get("location/to/my/file.cpp")
-arvadosFile$write("This is new file content")
-```
-
-#### Read whole file or just a portion of it:
-
-```r
-fileContent <- arvadosFile$read()
-fileContent <- arvadosFile$read("text")
-fileContent <- arvadosFile$read("raw", offset = 1024, length = 512)
 ```
 
 #### Read various file types:
 
-Chooses file type based on file name extension.  Recognized file extensions: 'txt', 'xlsx', 'csv', 'tsv', 'fasta', 'dat', 'bin', 'rds', 'rdata'.
+##### The preferred and recommended way to read large files and files with unknown format:
 
 ```r
-collection <- Collection$new(arv, collectionUUID)
 readFile <- collection$readArvFile(arvadosFile, istable = 'yes')                    # table
 readFile <- collection$readArvFile(arvadosFile, istable = 'no')                     # text
 readFile <- collection$readArvFile(arvadosFile)                                     # xlsx, csv, tsv, rds, rdata
@@ -287,23 +331,67 @@ readFile <- collection$readArvFile(arvadosFile, Ncol= 4, Nrow = 32)             
 readFile <- collection$readArvFile(arvadosFile, Ncol = 5, Nrow = 150, istable = "factor") # binary data.frame with factor or text
 ```
 
-#### Get ArvadosFile or Subcollection size:
+##### Read a table:
+
+```r
+arvadosFile   <- collection$get("myinput.txt")
+arvConnection <- arvadosFile$connection("r")
+mytable       <- read.table(arvConnection)
+```
+
+##### Read whole file or just a portion of it:
+
+```r
+fileContent <- arvadosFile$read()
+fileContent <- arvadosFile$read("text")
+fileContent <- arvadosFile$read("raw", offset = 1024, length = 512)
+```
+
+##### Read a gzip compressed R object:
+```r
+obj <- readRDS(gzcon(coll$get("abc.RDS")$connection("rb")))
+```
+
+#### Read various file types:
+
+##### Write various file types: 
+
+```r
+writeFile <- collection$writeFile(name = "myoutput.csv", file = file, fileFormat = "csv", istable = NULL, collectionUUID = collectionUUID)             # csv
+writeFile <- collection$writeFile(name = "myoutput.tsv", file = file, fileFormat = "tsv", istable = NULL, collectionUUID = collectionUUID)             # tsv
+writeFile <- collection$writeFile(name = "myoutput.fasta", file = file, fileFormat = "fasta", istable = NULL, collectionUUID = collectionUUID)         # fasta
+writeFile <- collection$writeFile(name = "myoutputtable.txt", file = file, fileFormat = "txt", istable = "yes", collectionUUID = collectionUUID)       # txt table
+writeFile <- collection$writeFile(name = "myoutputtext.txt", file = file, fileFormat = "txt", istable = "no", collectionUUID = collectionUUID)         # txt text
+writeFile <- collection$writeFile(name = "myoutputbinary.dat", file = file, fileFormat = "dat", collectionUUID = collectionUUID)                       # binary
+writeFile <- collection$writeFile(name = "myoutputxlsx.xlsx", file = file, fileFormat = "xlsx", collectionUUID = collectionUUID)                       # xlsx
+```
+
+##### Write a table:
+
+```r
+arvadosFile   <- collection$create("myoutput.txt")[[1]]
+arvConnection <- arvadosFile$connection("w")
+write.table(mytable, arvConnection)
+arvadosFile$flush()
+```
+
+##### Write to existing file (overwrites current content of the file):
+
+```r
+arvadosFile <- collection$get("location/to/my/file.cpp")
+arvadosFile$write("This is new file content")
+```
+
+#### Get ArvadosFile or Subcollection size: 
 
 ```r
 size <- arvadosFile$getSizeInBytes()
-# or
 size <- arvadosSubcollection$getSizeInBytes()
 ```
 
-#### Create new file in a collection (returns a vector of one or more ArvadosFile objects):
+#### Create new file in a collection (returns a vector of one or more ArvadosFile objects): 
 
 ```r
-collection$create(files)
-```
-
-**Example**
-
-```
 mainFile <- collection$create("cpp/src/main.cpp")[[1]]
 fileList <- collection$create(c("cpp/src/main.cpp", "cpp/src/util.h"))
 ```
