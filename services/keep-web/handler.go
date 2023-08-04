@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"git.arvados.org/arvados.git/lib/cmd"
 	"git.arvados.org/arvados.git/lib/webdavfs"
@@ -35,6 +36,10 @@ type handler struct {
 	Cache     cache
 	Cluster   *arvados.Cluster
 	setupOnce sync.Once
+
+	lockMtx    sync.Mutex
+	lock       map[string]*sync.RWMutex
+	lockTidied time.Time
 }
 
 var urlPDHDecoder = strings.NewReplacer(" ", "+", "-", "+")
@@ -182,15 +187,7 @@ func (h *handler) ServeHTTP(wOrig http.ResponseWriter, r *http.Request) {
 
 	w := httpserver.WrapResponseWriter(wOrig)
 
-	if method := r.Header.Get("Access-Control-Request-Method"); method != "" && r.Method == "OPTIONS" {
-		if !browserMethod[method] && !webdavMethod[method] {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		w.Header().Set("Access-Control-Allow-Headers", corsAllowHeadersHeader)
-		w.Header().Set("Access-Control-Allow-Methods", "COPY, DELETE, GET, LOCK, MKCOL, MOVE, OPTIONS, POST, PROPFIND, PROPPATCH, PUT, RMCOL, UNLOCK")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Max-Age", "86400")
+	if r.Method == "OPTIONS" && ServeCORSPreflight(w, r.Header) {
 		return
 	}
 
@@ -414,16 +411,20 @@ func (h *handler) ServeHTTP(wOrig http.ResponseWriter, r *http.Request) {
 			// collection id is outside scope of supplied
 			// token
 			tokenScopeProblem = true
+			sess.Release()
 			continue
 		} else if os.IsNotExist(err) {
 			// collection does not exist or is not
 			// readable using this token
+			sess.Release()
 			continue
 		} else if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			sess.Release()
 			return
 		}
 		defer f.Close()
+		defer sess.Release()
 
 		collectionDir, sessionFS, session, tokenUser = f, fs, sess, user
 		break
@@ -538,7 +539,11 @@ func (h *handler) ServeHTTP(wOrig http.ResponseWriter, r *http.Request) {
 	}
 	h.logUploadOrDownload(r, session.arvadosclient, sessionFS, fsprefix+strings.Join(targetPath, "/"), nil, tokenUser)
 
-	if writeMethod[r.Method] {
+	writing := writeMethod[r.Method]
+	locker := h.collectionLock(collectionID, writing)
+	defer locker.Unlock()
+
+	if writing {
 		// Save the collection only if/when all
 		// webdav->filesystem operations succeed --
 		// and send a 500 error if the modified
@@ -948,4 +953,55 @@ func (h *handler) determineCollection(fs arvados.CustomFileSystem, path string) 
 		}
 	}
 	return nil, ""
+}
+
+var lockTidyInterval = time.Minute * 10
+
+// Lock the specified collection for reading or writing. Caller must
+// call Unlock() on the returned Locker when the operation is
+// finished.
+func (h *handler) collectionLock(collectionID string, writing bool) sync.Locker {
+	h.lockMtx.Lock()
+	defer h.lockMtx.Unlock()
+	if time.Since(h.lockTidied) > lockTidyInterval {
+		// Periodically delete all locks that aren't in use.
+		h.lockTidied = time.Now()
+		for id, locker := range h.lock {
+			if locker.TryLock() {
+				locker.Unlock()
+				delete(h.lock, id)
+			}
+		}
+	}
+	locker := h.lock[collectionID]
+	if locker == nil {
+		locker = new(sync.RWMutex)
+		if h.lock == nil {
+			h.lock = map[string]*sync.RWMutex{}
+		}
+		h.lock[collectionID] = locker
+	}
+	if writing {
+		locker.Lock()
+		return locker
+	} else {
+		locker.RLock()
+		return locker.RLocker()
+	}
+}
+
+func ServeCORSPreflight(w http.ResponseWriter, header http.Header) bool {
+	method := header.Get("Access-Control-Request-Method")
+	if method == "" {
+		return false
+	}
+	if !browserMethod[method] && !webdavMethod[method] {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return true
+	}
+	w.Header().Set("Access-Control-Allow-Headers", corsAllowHeadersHeader)
+	w.Header().Set("Access-Control-Allow-Methods", "COPY, DELETE, GET, LOCK, MKCOL, MOVE, OPTIONS, POST, PROPFIND, PROPPATCH, PUT, RMCOL, UNLOCK")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Max-Age", "86400")
+	return true
 }

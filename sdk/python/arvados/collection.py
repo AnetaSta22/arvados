@@ -1262,8 +1262,7 @@ class Collection(RichCollectionBase):
                  block_manager=None,
                  replication_desired=None,
                  storage_classes_desired=None,
-                 put_threads=None,
-                 get_threads=None):
+                 put_threads=None):
         """Collection constructor.
 
         :manifest_locator_or_text:
@@ -1317,7 +1316,6 @@ class Collection(RichCollectionBase):
         self.replication_desired = replication_desired
         self._storage_classes_desired = storage_classes_desired
         self.put_threads = put_threads
-        self.get_threads = get_threads
 
         if apiconfig:
             self._config = apiconfig
@@ -1435,8 +1433,7 @@ class Collection(RichCollectionBase):
                                                 copies=copies,
                                                 put_threads=self.put_threads,
                                                 num_retries=self.num_retries,
-                                                storage_classes_func=self.storage_classes_desired,
-                                                get_threads=self.get_threads,)
+                                                storage_classes_func=self.storage_classes_desired)
         return self._block_manager
 
     def _remember_api_response(self, response):
@@ -1773,7 +1770,7 @@ class Collection(RichCollectionBase):
     _segment_re = re.compile(r'(\d+):(\d+):(\S+)')
 
     def _unescape_manifest_path(self, path):
-        return re.sub('\\\\([0-3][0-7][0-7])', lambda m: chr(int(m.group(1), 8)), path)
+        return re.sub(r'\\([0-3][0-7][0-7])', lambda m: chr(int(m.group(1), 8)), path)
 
     @synchronized
     def _import_manifest(self, manifest_text):

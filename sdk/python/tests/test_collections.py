@@ -323,6 +323,7 @@ class ArvadosCollectionsTest(run_test_server.TestCaseWithServers,
     class MockKeep(object):
         def __init__(self, content, num_retries=0):
             self.content = content
+            self.num_prefetch_threads = 1
 
         def get(self, locator, num_retries=0, prefetch=False):
             return self.content[locator]
@@ -592,7 +593,7 @@ class CollectionReaderTestCase(unittest.TestCase, CollectionTestMixin):
         # Ensure stripped_manifest() doesn't mangle our manifest in
         # any way other than stripping hints.
         self.assertEqual(
-            re.sub('\+[^\d\s\+]+', '', nonnormal),
+            re.sub(r'\+[^\d\s\+]+', '', nonnormal),
             reader.stripped_manifest())
         # Ensure stripped_manifest() didn't mutate our reader.
         self.assertEqual(nonnormal, reader.manifest_text())

@@ -1149,15 +1149,6 @@ func (s *IntegrationSuite) TestRunTrivialContainer(c *check.C) {
 }
 
 func (s *IntegrationSuite) TestContainerInputOnDifferentCluster(c *check.C) {
-	// As of Arvados 2.6.2 (April 2023), this test was going down the
-	// `if outcoll.UUID == ""` branch, checking that FUSE reports a specific
-	// error.
-	// With increased PySDK/FUSE retries from #12684, this test now trips up
-	// on #20425. The test times out as FUSE spends a long time retrying a
-	// request that will never succeed.
-	// This early skip can be removed after #20425 is fixed.
-	c.Skip("blocked by <https://dev.arvados.org/issues/20425>")
-	return
 	conn := s.super.Conn("z1111")
 	rootctx, _, _ := s.super.RootClients("z1111")
 	userctx, ac, _, _ := s.super.UserClients("z1111", rootctx, c, conn, s.oidcprovider.AuthEmail, true)
@@ -1240,6 +1231,17 @@ func (s *IntegrationSuite) runContainer(c *check.C, clusterID string, token stri
 		return cfs
 	}
 
+	checkwebdavlogs := func(cr arvados.ContainerRequest) {
+		req, err := http.NewRequest("OPTIONS", "https://"+ac.APIHost+"/arvados/v1/container_requests/"+cr.UUID+"/log/"+cr.ContainerUUID+"/", nil)
+		c.Assert(err, check.IsNil)
+		req.Header.Set("Origin", "http://example.example")
+		resp, err := ac.Do(req)
+		c.Assert(err, check.IsNil)
+		c.Check(resp.StatusCode, check.Equals, http.StatusOK)
+		// Check for duplicate headers -- must use Header[], not Header.Get()
+		c.Check(resp.Header["Access-Control-Allow-Origin"], check.DeepEquals, []string{"*"})
+	}
+
 	var ctr arvados.Container
 	var lastState arvados.ContainerState
 	deadline := time.Now().Add(time.Minute)
@@ -1274,5 +1276,6 @@ func (s *IntegrationSuite) runContainer(c *check.C, clusterID string, token stri
 		c.Assert(err, check.IsNil)
 	}
 	logcfs = showlogs(cr.LogUUID)
+	checkwebdavlogs(cr)
 	return outcoll, logcfs
 }
