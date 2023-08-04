@@ -186,19 +186,19 @@ projects <- listAll(arv$project_list, list(list("name","like","Example%")))
 
 #### Other useful features:
 
-# Check whether the project exists or not
+##### Check whether the project exists or not
 
 ```
 arv$project_exist(uuid = newProject$uuid)
 ```
 
-# Also check for given permissions
+##### Also check for given permissions
 
 ```
 arv$project_permission_check(uuid = "projectUUID", user = "personUUID", type = "can_read") # check access
 ```
 
-# And project properties
+##### And project properties
 
 ```
 arv$project_properties_get(uuid = "projectUUID")
@@ -303,20 +303,20 @@ collectionList <- listAll(arv$collections_list, list(list("name", "like", "Test%
 
 #### Other useful features:
 
-# Check whether the collection exists or not
+##### Check whether the collection exists or not
 
 ```
 # not written yet
 ```
 
-# Also check for given permissions
+##### Also check for given permissions
 
 ```
 # not working yet
 arv$collection_permission_check(uuid = "collectionUUID", user =  "personUUID", type = "can_read") 
 ```
 
-# And project properties
+##### And project properties
 
 ```
 arv$collections_properties_get("collectionUUID")
