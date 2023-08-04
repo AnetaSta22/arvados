@@ -41,6 +41,8 @@ library('ArvadosR')
 
 ## Usage
 
+Arvados environment must be initialized before using any package function. To do so run the first line of the code with your credentials that you can find on [Arvados Web](https://doc.arvados.org/main/api/methods.html). Just press the person icon and select "Get API token" and copy ARVADOS_API_TOKEN and ARVADOS_API_HOST.
+
 ### Initializing API
 
 ```r
@@ -65,9 +67,13 @@ arv$setNumRetries(5)
 
 ### Working with Aravdos projects
 
+A project is represented in the Arvados API as a group with its `group_class` field set to `"project"`. Projects can be created, updated and deleted. Each project must be named, you can give it a description and properties. In addition, for each project, you can grant different types of accessibility to other users of the application (`"can_read"`, `"can_write"`, `"can_manage"`, `"can_login"`).
+
 #### Create project:
 
 ##### Basic creation of the project:
+
+While creating a new project the only one required feture is name of the project. Not specified descriptiona and properties will be empty. If user won't specify ownerUUID of the project, the project will be saved in the user home directory. Properties is a list of at least two parts, it's name ("key" in the example) and it's value ("value" in the example) separated by an equals sign.
 
 ```r
 Properties <- list("key_1"="value_1", "key_2"="value_2")
@@ -76,6 +82,15 @@ newProject <- arv$project_create(name = "NewDocumentationProject", description =
 
 ##### Grant access rights for a project:
 
+In brief, a permission is represented in Arvados as a link object with the following values:
+* `link_class` is `"permission"`.
+* `name` is one of `"can_read"`, `"can_write"`, `"can_manage"`, or `"can_login"`.
+* `tail_uuid` identifies the user or role group that receives the permission.
+* `head_uuid` identifies the Arvados object this permission grants access to.
+For details, refer to the [Permissions model documentation](https://doc.arvados.org/v2.6/api/permission-model.html). Managing permissions is just a matter of ensuring the desired links exist using the standard create, update, and delete methods.
+
+Each person may be given different rights. 
+
 ```r
 arv$project_permission_give(type = "can_read", uuid = "projectUUID", user = "personUUID")
 arv$project_permission_give(type = "can_write", uuid = "projectUUID", user = "personUUID") 
@@ -83,6 +98,8 @@ arv$project_permission_give(type = "can_manage", uuid = "projectUUID", user = "p
 ```
 
 ##### Set properties for a project:
+
+Container requests, collections, groups, and links can have metadata properties set through their properties field. For details, refer to the [Metadata properties API reference](https://doc.arvados.org/v2.6/api/properties.html).
 
 ```r
 Properties <- list("key_1" = "value_1")
@@ -93,12 +110,16 @@ arv$project_properties_set(Properties, "projectUUID")
 
 ##### Basic update of the project:
 
+To modify an existing project just change needed function argument. 
+
 ```r
 newProperties <- list("key_1"="value_1", "key_2"="value_2")
-updatedProject <- arv$project_update(name = "NewDocumentationProject", properties = newProperties, uuid = "projectUUID")
+updatedProject <- arv$project_update(name = "NewDocumentationProject", description = "NewDescription", properties = newProperties, uuid = "projectUUID")
 ```
 
 ##### Update access rights for a project:
+
+To modify an existing permission—for example, to change its access level—find the existing link object for the permission, then update it with the new values you want. This example shows changing `can_read` permissions on a specific project to `read-only`. Adjust the filters appropriately to find the permission(s) you want to modify. To revoke an existing permission, find the existing link object for the permission, then delete it. This example shows changing deleting `"can_write"` permissions on a specific project.
 
 ```r
 # update access
@@ -121,11 +142,15 @@ arv$project_properties_append(properties = newProperties, uuid = "projectUUID")
 
 ##### Delete
 
+Delete project permanently.
+
 ```r
 arv$project_delete(uuid = "projectUUID")
 ```
 
 ##### Trash and untrash
+
+Move project to "Trash" folder. The project may be untrashed or will be deleted permanently after a month.
 
 ```r
 untrashedProject <- arv$project_untrash(uuid = "projectUUID")
@@ -156,7 +181,7 @@ projects <- listAll(arv$project_list, list(list("name","like","Example%")))
 ```
 
 > **Note**
-> Check method of filtering
+> Check different method for filtering
 > [Filtering methods:](https://doc.arvados.org/main/api/methods.html)
 
 #### Other useful features:
@@ -170,16 +195,18 @@ arv$project_exist(uuid = newProject$uuid)
 # Also check for given permissions
 
 ```
-arv$project_permission_check(uuid = newProject$uuid, user =  'arlog-tpzed-wlzptadvp43l1xe', type = "can_read") # check access
+arv$project_permission_check(uuid = "projectUUID", user = "personUUID", type = "can_read") # check access
 ```
 
 # And project properties
 
 ```
-arv$project_properties_get(uuid = newProject$uuid)
+arv$project_properties_get(uuid = "projectUUID")
 ```
 
 ### Working with collections
+
+Collections can be created, updated and deleted. Each project must be named, you can give it a description and properties. In addition, for each collection, you can grant different types of accessibility to other users of the application (`"can_read"`, `"can_write"`, `"can_manage"`, `"can_login"`). Working with collections is exactly the same as working with projects.
 
 #### Create a new collection:
 
@@ -234,12 +261,12 @@ basicList <- list("key_1"="value_1")
 collection <- arv$collections_properties_append(basicList, "collectionUUID") 
 ```
 
-#### Delete a project:
+#### Delete a collection:
 
 ##### Delete
 
 ```r
-arv$collections_delete(newCollection$uuid)
+arv$collections_delete("collectionUUID")
 ```
 
 ##### Trash and untrash
@@ -253,7 +280,7 @@ arv$collections_delete(newCollection$uuid)
 ##### Get a project:
 
 ```r
-newCollection <- arv$collections_get(newCollection$uuid)
+newCollection <- arv$collections_get("collectionUUID")
 ```
 
 ##### List projects:
@@ -286,21 +313,25 @@ collectionList <- listAll(arv$collections_list, list(list("name", "like", "Test%
 
 ```
 # not working yet
-arv$collection_permission_check(uuid = newCollection$uuid, user =  'arlog-tpzed-wlzptadvp43l1xe', type = "can_read") 
+arv$collection_permission_check(uuid = "collectionUUID", user =  "personUUID", type = "can_read") 
 ```
 
 # And project properties
 
 ```
-arv$collections_properties_get(newCollection$uuid)
+arv$collections_properties_get("collectionUUID")
 ```
 
 ### Manipulating collection content
 
+The `Collection` class provides a high-level interface to read, create, and update collections. It orchestrates multiple requests to API and Keep so you don’t have to worry about the low-level details of keeping everything in sync. 
+
+This page only shows you how to perform common tasks using the `Collection` class. To see all the supported constructor arguments and methods, refer to the [Collection class](https://doc.arvados.org/v2.6/sdk/python/arvados/collection.html#arvados.collection.Collection) documentation.
+
 #### Initialize a collection object:
 
 ```r
-collection <- Collection$new(arv, "uuid")
+collection <- Collection$new(arv, "collectionUUID")
 ```
 
 #### Find file :
@@ -391,12 +422,16 @@ size <- arvadosSubcollection$getSizeInBytes()
 
 #### Create new file in a collection (returns a vector of one or more ArvadosFile objects): 
 
+Once you have a `Collection object`, call the collection$create method with a file path to create file in a given directory.
+
 ```r
 mainFile <- collection$create("cpp/src/main.cpp")[[1]]
 fileList <- collection$create(c("cpp/src/main.cpp", "cpp/src/util.h"))
 ```
 
 #### Delete file from a collection:
+
+Once you have a `Collection object`, call the collection$remove method with a file path to remove that file or directory from the collection.
 
 ```r
 collection$remove("location/to/my/file.cpp")
