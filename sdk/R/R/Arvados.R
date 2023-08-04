@@ -90,8 +90,14 @@ Arvados <- R6::R6Class(
         #' Properties <- list() # should contain a list of new properties to be added
         #' new_project <- arv$project_create(name = "project name", description = "project description", owner_uuid = "project UUID", properties = NULL, ensureUniqueName = "false")
         #' }
-        project_create = function(name, description, ownerUUID, properties = NULL, ensureUniqueName = "false")
+        project_create = function(name, description, ownerUUID = NULL, properties = NULL, ensureUniqueName = "false")
         {
+            if (is.null(ownerUUID)) {
+                ownerUUID <- self$users_current()$uuid
+            } else {
+                ownerUUID <- ownerUUID
+            }
+
             group <- list(name = name, description = description, owner_uuid = ownerUUID, properties = properties)
             group <- c("group_class" = "project", group)
             self$groups_create(group, ensureUniqueName =  ensureUniqueName)
@@ -230,6 +236,48 @@ Arvados <- R6::R6Class(
         {
             self$groups_delete(uuid)
         },
+
+        project_trash = function(uuid)
+        {
+            endPoint <- stringr::str_interp("groups/${uuid}/trash")
+            url <- paste0(private$host, endPoint)
+            headers <- list(Authorization = paste("Bearer", private$token),
+                            "Content-Type" = "application/json")
+
+            queryArgs <- NULL
+
+            body <- NULL
+
+            response <- private$REST$http$exec("POST", url, headers, body,
+                                               queryArgs, private$numRetries)
+            resource <- private$REST$httpParser$parseJSONResponse(response)
+
+            if(!is.null(resource$errors))
+                stop(resource$errors)
+        },
+
+        project_untrash = function(uuid)
+        {
+            endPoint <- stringr::str_interp("groups/${uuid}/untrash")
+            url <- paste0(private$host, endPoint)
+            headers <- list(Authorization = paste("Bearer", private$token),
+                            "Content-Type" = "application/json")
+            queryArgs <- NULL
+
+            body <- NULL
+
+            response <- private$REST$http$exec("POST", url, headers, body,
+                                               queryArgs, private$numRetries)
+            resource <- private$REST$httpParser$parseJSONResponse(response)
+
+            if(!is.null(resource$errors))
+                stop(resource$errors)
+
+            resource
+        },
+
+
+
 
         #' @description
         #' api_clients_get is a method defined in Arvados class.
@@ -750,6 +798,13 @@ Arvados <- R6::R6Class(
         collections_create = function(name, description, ownerUUID = NULL, properties = NULL, # name and description are obligatory
                                       ensureUniqueName = "false", clusterID = NULL)
         {
+            if (is.null(ownerUUID)) {
+                ownerUUID <- self$users_current()$uuid
+            } else {
+                ownerUUID <- ownerUUID
+            }
+
+
             endPoint <- stringr::str_interp("collections")
             url <- paste0(private$host, endPoint)
             headers <- list(Authorization = paste("Bearer", private$token),
@@ -779,6 +834,115 @@ Arvados <- R6::R6Class(
             resource
         },
 
+        collections_properties_set = function(listProperties, uuid)
+        {
+            endPoint <- stringr::str_interp("collections/${uuid}")
+            url <- paste0(private$host, endPoint)
+            headers <- list(Authorization = paste("Bearer", private$token),
+                            "Content-Type" = "application/json")
+            queryArgs <- NULL
+
+            coll <- self$collections_list(list(list('uuid', '=', uuid)))
+            requiredProperties <- coll$items[[1]]$properties
+            requiredProperty <- requiredProperties[which(grepl('responsible_person_uuid', attributes(requiredProperties)$names)==TRUE)]
+
+            properties <- c(listProperties, requiredProperty)
+
+            collection <- list(properties = properties)
+
+            if(length(collection) > 0)
+                body <- jsonlite::toJSON(list(collection = collection),
+                                         auto_unbox = TRUE)
+            else
+                body <- NULL
+
+            response <- private$REST$http$exec("PUT", url, headers, body,
+                                               queryArgs, private$numRetries)
+            resource <- private$REST$httpParser$parseJSONResponse(response)
+
+            if(!is.null(resource$errors))
+                stop(resource$errors)
+
+            resource
+        },
+
+        collections_properties_append = function(listProperties, uuid)
+        {
+            endPoint <- stringr::str_interp("collections/${uuid}")
+            url <- paste0(private$host, endPoint)
+            headers <- list(Authorization = paste("Bearer", private$token),
+                            "Content-Type" = "application/json")
+            queryArgs <- NULL
+
+
+            coll <- self$collections_list(list(list('uuid', '=', uuid)))
+            requiredProperties <- coll$items[[1]]$properties
+
+            properties <- c(listProperties, requiredProperties)
+
+            collection <- list(properties = properties)
+
+            if(length(collection) > 0)
+                body <- jsonlite::toJSON(list(collection = collection),
+                                         auto_unbox = TRUE)
+            else
+                body <- NULL
+
+            response <- private$REST$http$exec("PUT", url, headers, body,
+                                               queryArgs, private$numRetries)
+            resource <- private$REST$httpParser$parseJSONResponse(response)
+
+            if(!is.null(resource$errors))
+                stop(resource$errors)
+
+            resource
+        },
+
+        collections_properties_get = function(uuid)
+        {
+            coll <- self$collections_list(list(list('uuid', '=', uuid)))
+            coll$items[[1]]$properties
+        },
+
+        collections_properties_delete = function(oneProp, uuid)
+        {
+            coll <- self$collections_list(list(list('uuid', '=', uuid))) # find project
+            collProp <- coll$items[[1]]$properties
+            for (i in 1:length(collProp)){
+                solution <- identical(collProp[i],oneProp)
+                if (solution == TRUE) {
+                    collProp <- collProp[names(collProp) != names(oneProp)]
+
+                    endPoint <- stringr::str_interp("collections/${uuid}")
+                    url <- paste0(private$host, endPoint)
+                    headers <- list(Authorization = paste("Bearer", private$token),
+                                    "Content-Type" = "application/json")
+                    queryArgs <- NULL
+
+
+                    properties <- collProp
+
+                    collection <- list(properties = properties)
+
+                    if(length(collection) > 0)
+                        body <- jsonlite::toJSON(list(collection = collection),
+                                                 auto_unbox = TRUE)
+                    else
+                        body <- NULL
+
+                    response <- private$REST$http$exec("PUT", url, headers, body,
+                                                       queryArgs, private$numRetries)
+                    resource <- private$REST$httpParser$parseJSONResponse(response)
+
+                    if(!is.null(resource$errors))
+                        stop(resource$errors)
+
+                    resource
+                }
+            }
+
+        },
+
         #' @description
         #' collections_update is a method defined in Arvados class.
         #' @param name New name of the collection.
@@ -790,7 +954,7 @@ Arvados <- R6::R6Class(
         #' \dontrun{
         #' collection <- arv$collections_update(name = "newCollectionTitle", description = "newCollectionDescription", ownerUUID = "collectionOwner", properties = NULL, uuid = "collectionUUID")
         #' }
-        collections_update = function(name, description, ownerUUID = NULL, properties = NULL, uuid)
+        collections_update = function(name, description, properties = NULL, uuid)
         {
             endPoint <- stringr::str_interp("collections/${uuid}")
             url <- paste0(private$host, endPoint)
@@ -798,7 +962,12 @@ Arvados <- R6::R6Class(
                             "Content-Type" = "application/json")
             queryArgs <- NULL
 
-            collection <- list(name = name, description = description, ownerUUID = ownerUUID, properties = properties)
+            coll <- self$collections_list(list(list('uuid', '=', uuid)))
+            requiredProperties <- coll$items[[1]]$properties
+            properties <- c(properties, requiredProperties)
+
+            collection <- list(name = name, description = description, properties = properties)
+
             if(length(collection) > 0)
                 body <- jsonlite::toJSON(list(collection = collection),
                                          auto_unbox = TRUE)
@@ -1969,6 +2138,82 @@ Arvados <- R6::R6Class(
                 permisions <- theType[which(sapply(theType, "[[", "link_class") == 'permission')]
                 print(permisions[[1]]$name)
             }
+        },
+
+
+        collection_permission_check = function(uuid, user, type = NULL)
+        {
+            examples <- self$links_list(list(list("head_uuid","=", uuid)))
+
+            theUser <- examples[which(sapply(examples$items, "[[", "tail_uuid") == user)]
+
+            if (length(type) == 0 ){
+                theUser
+            } else {
+                theType <- theUser$items[which(sapply(theUser$items, "[[", "name") == type)]
+                permisions <- theType[which(sapply(theType, "[[", "link_class") == 'permission')]
+                print(permisions[[1]]$name)
+            }
+        },
+
+        collection_permission_update = function(typeOld, typeNew, uuid, user)
+        {
+            link <- list("name" = typeNew)
+
+            examples <- self$links_list(list(list("head_uuid","=", uuid)))
+
+            theUser <- examples[which(sapply(examples$items, "[[", "tail_uuid") == user)]
+            theType <- theUser$items[which(sapply(theUser$items, "[[", "name") == typeOld)]
+            solution <- theType[which(sapply(theType, "[[", "link_class") == 'permission')]
+
+            if (length(solution) == 0) {
+                cat(format('No permission granted'))
+            } else {
+                self$links_update(link, solution[[1]]$uuid)
+            }
+        },
+
+        collection_permission_refuse = function(type, uuid, user)
+        {
+            examples <- self$links_list(list(list("head_uuid","=", uuid)))
+
+            theUser <- examples[which(sapply(examples$items, "[[", "tail_uuid") == user)]
+            theType <- theUser$items[which(sapply(theUser$items, "[[", "name") == type)]
+            solution <- theType[which(sapply(theType, "[[", "link_class") == 'permission')]
+
+            if (length(solution) == 0) {
+                cat(format('No permission granted'))
+            } else {
+                self$links_delete(solution[[1]]$uuid)
+            }
+
+        },
+
+        collection_permission_give = function(type, uuid, user)
+        {
+            endPoint <- stringr::str_interp("links")
+            url <- paste0(private$host, endPoint)
+            headers <- list(Authorization = paste("Bearer", private$token),
+                            "Content-Type" = "application/json")
+            queryArgs <- NULL
+
+            # it is possible to make it as pasting a list to function, not a 3 arg. What's better?
+            link <- list("link_class" = "permission", "name" = type, "head_uuid" = uuid, "tail_uuid" = user)
+
+            if(length(link) > 0)
+                body <- jsonlite::toJSON(list(link = link),
+                                         auto_unbox = TRUE)
+            else
+                body <- NULL
+
+            response <- private$REST$http$exec("POST", url, headers, body,
+                                               queryArgs, private$numRetries)
+            resource <- private$REST$httpParser$parseJSONResponse(response)
+
+            if(!is.null(resource$errors))
+                stop(resource$errors)
+
+            resource
         },
 
         #' @description
