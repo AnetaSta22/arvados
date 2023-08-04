@@ -65,22 +65,73 @@ arv$setNumRetries(5)
 
 ### Working with Aravdos projects
 
-##### Create project:
+#### Create project:
+
+##### Basic creation of the project:
 
 ```r
-newProject <- arv$project_create(name = "project name", description = "project description", owner_uuid = "project UUID", properties = NULL, ensureUniqueName = "false")
+Properties <- list("key_1"="value_1", "key_2"="value_2")
+newProject <- arv$project_create(name = "NewDocumentationProject", description = "This is a test project", ownerUUID = "HeadProjectUUID", properties = Properties)
 ```
 
-##### Update project:
+##### Grant access rights for a project:
 
 ```r
-updatedProject <- arv$project_update(name = "new project name", properties = newProperties, uuid = "projectUUID")
+arv$project_permission_give(type = "can_read", uuid = "projectUUID", user = "personUUID")
+arv$project_permission_give(type = "can_write", uuid = "projectUUID", user = "personUUID") 
+arv$project_permission_give(type = "can_manage", uuid = "projectUUID", user = "personUUID") 
+
 ```
 
-##### Delete a project:
+##### Set properties for a project:
 
 ```r
-deletedProject <- arv$project_delete("uuid")
+Properties <- list("key_1" = "value_1")
+arv$project_properties_set(Properties, "projectUUID")
+
+```
+
+#### Update project:
+
+##### Basic update of the project:
+
+```r
+newProperties <- list("key_1"="value_1", "key_2"="value_2")
+updatedProject <- arv$project_update(name = "NewDocumentationProject", properties = newProperties, uuid = "projectUUID")
+```
+
+##### Update access rights for a project:
+
+```r
+# update access
+arv$project_permission_update(typeOld = "can_read", typeNew = 'can_write', uuid = "projectUUID", user = "personUUID")
+# refuse access
+arv$project_permission_refuse(type = "can_write", uuid = "projectUUID", user = "personUUID") 
+```
+
+##### Change properties for  a project:
+
+```r
+newProperties <- list("key_1"="value_1")
+# delete one property
+arv$project_properties_delete(oneProp = newProperties, uuid = "projectUUID")
+# append properties
+arv$project_properties_append(properties = newProperties, uuid = "projectUUID") 
+```
+
+#### Delete a project:
+
+##### Delete
+
+```r
+arv$project_delete(uuid = "projectUUID")
+```
+
+##### Trash and untrash
+
+```r
+untrashedProject <- arv$project_untrash(uuid = "projectUUID")
+arv$project_trash(uuid = "projectUUID")
 ```
 
 #### Find a project:
@@ -88,24 +139,20 @@ deletedProject <- arv$project_delete("uuid")
 ##### Get a project:
 
 ```r
-project <- arv$project_get("uuid")
+project <- arv$project_get(newProject$uuid)
 ```
 
 ##### List projects:
 
 ```r
-list subprojects of a project
+## list subprojects of a project
 projects <- arv$project_list(list(list("owner_uuid", "=", "aaaaa-j7d0g-ccccccccccccccc")))
-
-list projects which have names beginning with Example
+## list projects which have names beginning with Example
 examples <- arv$project_list(list(list("name","like","Example%")))
-```
-
-##### List all projects even if the number of items is greater than maximum API limit:
-
-```r
+#List all projects even if the number of items is greater than maximum API limit:
 projects <- listAll(arv$project_list, list(list("name","like","Example%")))
 ```
+
 
 ### Working with collections
 
